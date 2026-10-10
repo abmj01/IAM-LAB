@@ -38,6 +38,9 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?Set KC_ADMIN_PASSWORD in .env}
       KC_HEALTH_ENABLED: "true"
       KC_TRUSTSTORE_PATHS: /opt/keycloak/conf/truststores   # trust every certificate in this folder
+      # Browsers (and tokens) use localhost:8080; other containers may call keycloak:8080 directly.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:8080:8080"   # only reachable from this computer
     volumes:
@@ -48,5 +51,82 @@ services:
       postgres:
         condition: service_healthy   # wait until the database is ready
 
+  # Dashboards ("company app"), logs in through Keycloak with OIDC.
+  grafana:
+    image: grafana/grafana:13.2.3
+    restart: unless-stopped
+    environment:
+      GF_SERVER_ROOT_URL: http://localhost:3000/        # must match the redirect URI in Keycloak
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}          # local break-glass admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:?Set GF_ADMIN_PASSWORD in .env}
+      # --- Login with Keycloak (OIDC) ---
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: Keycloak
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GF_OAUTH_CLIENT_SECRET:?Set GF_OAUTH_CLIENT_SECRET in .env}
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid email profile
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      # Browser goes to localhost:8080; Grafana itself calls keycloak:8080 inside Docker.
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: http://localhost:8080/realms/greenfield/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak:8080/realms/greenfield/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: http://keycloak:8080/realms/greenfield/protocol/openid-connect/userinfo
+      # Which token fields to use
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: preferred_username
+      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: email
+      GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: name
+      GF_AUTH_GENERIC_OAUTH_GROUPS_ATTRIBUTE_PATH: groups
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"                    # create the account at first SSO login
+      GF_AUTH_GENERIC_OAUTH_ALLOWED_GROUPS: GRP-Org-All-Staff        # only active employees may log in
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'GRP-App-Grafana-Admin') && 'Admin' || 'Viewer'"
+      # Logging out of Grafana also ends the Keycloak session (single logout)
+      GF_AUTH_SIGNOUT_REDIRECT_URL: http://localhost:8080/realms/greenfield/protocol/openid-connect/logout?client_id=grafana&post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Flogin
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - keycloak
+
+  # Git hosting ("company app"), logs in through Keycloak with OIDC.
+  gitea:
+    image: gitea/gitea:28.1.0
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__database__DB_TYPE: sqlite3                 # one file in the volume: enough for the lab
+      GITEA__server__ROOT_URL: http://localhost:3001/   # must match the redirect URI in Keycloak
+      GITEA__server__DISABLE_SSH: "true"                # web (HTTPS/HTTP) access only
+      GITEA__security__INSTALL_LOCK: "true"             # skip the web installer: config comes from here
+      GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "true"   # accounts only via Keycloak
+      GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"     # create the account at first SSO login
+      GITEA__oauth2_client__USERNAME: preferred_username         # Gitea username = AD login name
+    ports:
+      - "127.0.0.1:3001:3000"   # 3000 is taken by Grafana
+    volumes:
+      - gitea-data:/data
+    depends_on:
+      - keycloak
+
+  # File sharing ("company app"), logs in through Keycloak with SAML.
+  nextcloud:
+    image: nextcloud:34.0.4-apache
+    restart: unless-stopped
+    environment:
+      SQLITE_DATABASE: nextcloud                       # one file in the volume: enough for the lab
+      NEXTCLOUD_ADMIN_USER: ${NC_ADMIN_USER}           # local break-glass admin, created on first start
+      NEXTCLOUD_ADMIN_PASSWORD: ${NC_ADMIN_PASSWORD:?Set NC_ADMIN_PASSWORD in .env}
+      NEXTCLOUD_TRUSTED_DOMAINS: localhost             # host names Nextcloud accepts requests for
+      OVERWRITEHOST: localhost:3002                    # build links (and SAML URLs) with the right port
+      OVERWRITEPROTOCOL: http
+      OVERWRITECLIURL: http://localhost:3002
+    ports:
+      - "127.0.0.1:3002:80"
+    volumes:
+      - nextcloud-data:/var/www/html
+
 volumes:
   postgres-data:
+  grafana-data:
+  gitea-data:
+  nextcloud-data:

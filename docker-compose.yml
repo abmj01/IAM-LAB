@@ -51,6 +51,14 @@ services:
       postgres:
         condition: service_healthy   # wait until the database is ready
 
+  # Fake mail server: catches all emails (e.g. password resets) and shows them in a web inbox.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"   # web inbox: http://localhost:8025
+    # SMTP port 1025 is not published: only containers (Keycloak) send mail to mailpit:1025.
+
   # Dashboards ("company app"), logs in through Keycloak with OIDC.
   grafana:
     image: grafana/grafana:13.2.3
@@ -101,6 +109,7 @@ services:
       GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "true"   # accounts only via Keycloak
       GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"     # create the account at first SSO login
       GITEA__oauth2_client__USERNAME: preferred_username         # Gitea username = AD login name
+      GITEA__session__SESSION_LIFE_TIME: "3600"   # session ends after 1 h (Gitea can't receive Keycloak logouts)
     ports:
       - "127.0.0.1:3001:3000"   # 3000 is taken by Grafana
     volumes:

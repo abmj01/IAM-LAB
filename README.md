@@ -42,7 +42,7 @@ flowchart LR
 | 0 | Lab setup, fake HR data | ✅ Done |
 | 1 | Directory: Samba AD, OUs, groups, scripted user import, password policy | ✅ Done |
 | 2 | SSO: Keycloak + AD federation, Grafana & Gitea (OIDC), Nextcloud (SAML), password reset | ✅ Done |
-| 3 | MFA: TOTP for everyone, passkeys for admins, brute-force protection, recovery runbook | 🔄 In progress |
+| 3 | MFA: TOTP for everyone, passkeys for admins, brute-force protection, recovery runbook | ✅ Done |
 | 4–5 | Own app (FastAPI): token validation, roles, OPA policies, Separation of Duties | ⏳ Planned |
 | 6 | Identity governance (midPoint): joiner / mover / leaver, access reviews | ⏳ Planned |
 | 7–9 | Secrets & PAM (OpenBao), logging & detection (Grafana/Loki), everything as code | ⏳ Planned |

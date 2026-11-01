@@ -8,6 +8,7 @@ Run locally with::
 from fastapi import FastAPI
 
 from expenses_app import __version__
+from expenses_app.auth.token_validator import TokenValidator
 from expenses_app.settings import Settings, get_settings
 
 
@@ -25,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(title="Greenfield Expense Claims", version=__version__)
     application.state.settings = application_settings
+    application.state.token_validator = TokenValidator(application_settings)
 
     @application.get("/health", tags=["operations"])
     def health() -> dict[str, str]:

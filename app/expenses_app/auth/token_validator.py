@@ -112,34 +112,3 @@ class TokenValidator:
         """Read this API's client roles from ``resource_access.<audience>.roles``."""
         client_access = claims.get("resource_access", {}).get(self._expected_audience, {})
         return tuple(client_access.get("roles", ()))
-
-
-# Implementation steps
-# --------------------
-# 1. [DONE] Define the result type: a frozen dataclass `TokenClaims` with the fields the app needs:
-#    subject (`sub`), username (`preferred_username`), roles (from `resource_access`
-#    -> api_audience -> `roles`), and the full raw claims dictionary.
-#
-# 2. [DONE] Define one error type for callers: `TokenValidationError(Exception)`.
-#    Callers should never need to know PyJWT's many exception classes.
-#
-# 3. [DONE] Create the class `TokenValidator`:
-#    - Constructor takes `Settings` (and optionally a ready `PyJWKClient`, so tests can
-#      inject one that serves their own test keys).
-#    - Store: the JWKS client (pointing at `settings.jwks_uri`), the expected issuer
-#      (`settings.issuer`), the expected audience (`settings.api_audience`),
-#      the allowed algorithms (only "RS256") and a clock leeway (e.g. 30 seconds).
-#
-# 4. [DONE] Method `validate(raw_token: str) -> TokenClaims`:
-#    a. Reject an empty token straight away.
-#    b. Get the signing key that matches the token's `kid` header from the JWKS client.
-#       (Network or unknown-key problems raise PyJWKClientError.)
-#    c. Call `jwt.decode(...)` with: the key, `algorithms=[...]`, `audience=`, `issuer=`,
-#       `leeway=`, and `options={"require": ["exp", "iat", "iss", "aud", "sub"]}`.
-#       Never disable signature verification; never omit `algorithms`.
-#    d. Turn the decoded dictionary into `TokenClaims` (step 1).
-#    e. Catch `InvalidTokenError` and `PyJWKClientError` and re-raise them as
-#       `TokenValidationError`, keeping the original as the cause (`raise ... from error`).
-#
-# 5. [DONE] Keep it free of FastAPI: this module only answers "is this token valid?".
-#    Turning failures into HTTP 401 is the job of `dependencies.py`.

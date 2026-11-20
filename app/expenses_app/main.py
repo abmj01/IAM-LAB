@@ -6,8 +6,11 @@ Run locally with::
 """
 
 from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 
 from expenses_app import __version__
+from expenses_app.auth.oidc_login import build_oauth_client, router
+from expenses_app.auth.session_store import SessionStore
 from expenses_app.auth.token_validator import TokenValidator
 from expenses_app.settings import Settings, get_settings
 
@@ -27,6 +30,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(title="Greenfield Expense Claims", version=__version__)
     application.state.settings = application_settings
     application.state.token_validator = TokenValidator(application_settings)
+    application.state.oauth_client = build_oauth_client(application_settings)
+    application.state.session_store = SessionStore(application_settings.session_lifetime_seconds)
+
+    application.add_middleware(
+        SessionMiddleware,
+        secret_key=application_settings.session_secret_key.get_secret_value(),
+        same_site="lax",
+        https_only=application_settings.session_cookie_secure,
+    )
+    application.include_router(router)
 
     @application.get("/health", tags=["operations"])
     def health() -> dict[str, str]:

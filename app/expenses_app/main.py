@@ -9,9 +9,11 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from expenses_app import __version__
-from expenses_app.auth.oidc_login import build_oauth_client, router
+from expenses_app.auth.oidc_login import build_oauth_client
+from expenses_app.auth.oidc_login import router as auth_router
 from expenses_app.auth.session_store import SessionStore
 from expenses_app.auth.token_validator import TokenValidator
+from expenses_app.pages import router as pages_router
 from expenses_app.settings import Settings, get_settings
 
 
@@ -39,7 +41,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         same_site="lax",
         https_only=application_settings.session_cookie_secure,
     )
-    application.include_router(router)
+    application.include_router(auth_router)
+    application.include_router(pages_router)
 
     @application.get("/health", tags=["operations"])
     def health() -> dict[str, str]:

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}My claims{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My claims</h1>
+  <p class="muted">Submit a new expense and follow the ones you already sent.</p>
+</div>
+
+<div class="layout-split">
+  <section class="card form-card" aria-labelledby="new-claim-heading">
+    <h2 id="new-claim-heading">New claim</h2>
+
+    {% if form_error %}
+    <div class="notice notice-error" role="alert">{{ form_error }}</div>
+    {% endif %}
+
+    <form method="post" action="/claims">
+      <label for="amount">Amount (€)</label>
+      <input id="amount" name="amount" type="number" inputmode="decimal" step="0.01"
+             min="0.01" max="10000" required placeholder="0.00"
+             value="{{ form_values.amount if form_values else '' }}">
+
+      <label for="description">Description</label>
+      <input id="description" name="description" type="text" maxlength="200" required
+             placeholder="Train ticket to the Rotterdam depot"
+             value="{{ form_values.description if form_values else '' }}">
+
+      <button class="button button-primary button-block" type="submit">Submit claim</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="history-heading">
+    <h2 id="history-heading" class="visually-hidden">Your claims</h2>
+    {% if claims %}
+      {% include "_claims_table.html" %}
+    {% else %}
+      <div class="card empty">You haven't submitted any claims yet.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

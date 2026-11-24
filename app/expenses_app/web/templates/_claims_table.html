@@ -1,0 +1,34 @@
+{# A table of claims. Set `show_owner` to add an Employee column, and `action` and
+   `action_label` to add a button that posts to /claims/<id>/<action>. #}
+<div class="card table-card">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Submitted</th>
+        {% if show_owner %}<th scope="col">Employee</th>{% endif %}
+        <th scope="col">Description</th>
+        <th scope="col" class="numeric">Amount</th>
+        <th scope="col">Status</th>
+        {% if action %}<th scope="col"><span class="visually-hidden">Action</span></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for claim in claims %}
+      <tr>
+        <td class="muted">{{ claim.submitted_at.strftime("%d %b %Y") }}</td>
+        {% if show_owner %}<td>{{ claim.owner_username }}</td>{% endif %}
+        <td>{{ claim.description }}</td>
+        <td class="numeric">€{{ claim.amount }}</td>
+        <td><span class="badge badge-{{ claim.status.value }}">{{ claim.status.value | capitalize }}</span></td>
+        {% if action %}
+        <td class="actions">
+          <form method="post" action="/claims/{{ claim.claim_id }}/{{ action }}">
+            <button class="button button-primary" type="submit">{{ action_label }}</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

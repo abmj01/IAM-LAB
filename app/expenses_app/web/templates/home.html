@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{% if user %}Overview{% else %}Welcome{% endif %}{% endblock %}
+
+{% block content %}
+{% if not user %}
+<section class="hero">
+  <h1>Expense claims, without the paperwork</h1>
+  <p>Submit your expenses, follow their approval, and get paid. Sign in with your Greenfield account.</p>
+  <a class="button button-primary button-large" href="/auth/login">Log in</a>
+</section>
+{% else %}
+<div class="page-header">
+  <h1>Hello, {{ user.username }}</h1>
+  <p class="muted">Here is what needs your attention.</p>
+</div>
+
+<div class="stat-grid">
+  <a class="card stat" href="/claims">
+    <span class="stat-value">{{ own_claims | length }}</span>
+    <span class="stat-label">My claims</span>
+  </a>
+  {% if awaiting_approval is not none %}
+  <a class="card stat" href="/approvals">
+    <span class="stat-value">{{ awaiting_approval | length }}</span>
+    <span class="stat-label">Waiting for approval</span>
+  </a>
+  {% endif %}
+  {% if awaiting_payment is not none %}
+  <a class="card stat" href="/payments">
+    <span class="stat-value">{{ awaiting_payment | length }}</span>
+    <span class="stat-label">Waiting for payment</span>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

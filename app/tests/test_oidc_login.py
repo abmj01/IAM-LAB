@@ -306,7 +306,7 @@ class TestCallback:
         )
 
         assert response.status_code == 400
-        assert response.json() == {"detail": "Login failed"}
+        assert "Login failed" in response.text
         assert error_description not in response.text
 
     def test_newline_in_error_cannot_fake_a_log_line(self, client, fake_keycloak, caplog):

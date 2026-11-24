@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · Greenfield Expenses</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">G</span>
+        <span>Greenfield <strong>Expenses</strong></span>
+      </a>
+
+      {% if user %}
+      <nav class="nav" aria-label="Main">
+        <a href="/" {% if active_page == "home" %}class="active" aria-current="page"{% endif %}>Overview</a>
+        <a href="/claims" {% if active_page == "claims" %}class="active" aria-current="page"{% endif %}>My claims</a>
+        {% if can_approve %}
+        <a href="/approvals" {% if active_page == "approvals" %}class="active" aria-current="page"{% endif %}>Approvals</a>
+        {% endif %}
+        {% if can_pay %}
+        <a href="/payments" {% if active_page == "payments" %}class="active" aria-current="page"{% endif %}>Payments</a>
+        {% endif %}
+      </nav>
+
+      <div class="account">
+        <span class="avatar" aria-hidden="true">{{ user.username[:1] | upper }}</span>
+        <span class="account-name">{{ user.username }}</span>
+        <form method="post" action="/auth/logout">
+          <button class="button button-quiet" type="submit">Log out</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="container">
+    {% if notice %}
+    <div class="notice notice-{{ notice[0] }}" role="status">{{ notice[1] }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

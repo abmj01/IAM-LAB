@@ -11,8 +11,8 @@ from expenses_app.auth.access_control import get_current_claims, get_token_valid
 from expenses_app.auth.token_validator import TokenClaims, TokenValidator
 from expenses_app.main import create_app
 
-LOGIN_ROUTE = "/login-required"
-ROLE_ROUTE = "/role-required"
+LOGIN_ROUTE = "/api/test/login-required"
+ROLE_ROUTE = "/api/test/role-required"
 REQUIRED_ROLE = "finance-approver"
 BASIC_AUTH_HEADER = {"Authorization": "Basic dXNlcjpwYXNzd29yZA=="}
 

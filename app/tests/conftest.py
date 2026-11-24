@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt import PyJWK
 from jwt.exceptions import PyJWKClientError
 
-from expenses_app.auth.token_validator import TokenValidator
+from expenses_app.auth.token_validator import TokenClaims, TokenValidator
 from expenses_app.settings import Settings
 from tests.jwt_helpers import TEST_KEY_ID
 
@@ -90,3 +90,22 @@ def make_token(signing_key: rsa.RSAPrivateKey) -> Callable[..., str]:
         return jwt.encode(claims, key or signing_key, algorithm="RS256", headers={"kid": key_id})
 
     return _make_token
+
+
+@pytest.fixture
+def token_for(
+    make_token: Callable[..., str], valid_claims: dict[str, Any], settings: Settings
+) -> Callable[[TokenClaims], str]:
+    """Factory that signs an access token for a test user, with their roles for this API."""
+
+    def _token_for(user: TokenClaims) -> str:
+        return make_token(
+            {
+                **valid_claims,
+                "sub": user.subject,
+                "preferred_username": user.username,
+                "resource_access": {settings.api_audience: {"roles": list(user.roles)}},
+            }
+        )
+
+    return _token_for

@@ -5,16 +5,27 @@ Run locally with::
     uvicorn expenses_app.main:create_app --factory --reload
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from expenses_app import __version__
+from expenses_app.api.claims import router as claims_api_router
 from expenses_app.auth.oidc_login import build_oauth_client
 from expenses_app.auth.oidc_login import router as auth_router
+from expenses_app.auth.page_access import LoginRequiredError, redirect_to_login
 from expenses_app.auth.session_store import SessionStore
 from expenses_app.auth.token_validator import TokenValidator
-from expenses_app.pages import router as pages_router
+from expenses_app.claims.service import ClaimService
+from expenses_app.claims.store import ClaimStore
 from expenses_app.settings import Settings, get_settings
+from expenses_app.web.pages import render_http_error
+from expenses_app.web.pages import router as pages_router
+
+STATIC_DIRECTORY = Path(__file__).parent / "web" / "static"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -34,6 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.token_validator = TokenValidator(application_settings)
     application.state.oauth_client = build_oauth_client(application_settings)
     application.state.session_store = SessionStore(application_settings.session_lifetime_seconds)
+    application.state.claim_service = ClaimService(ClaimStore())
 
     application.add_middleware(
         SessionMiddleware,
@@ -41,8 +53,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         same_site="lax",
         https_only=application_settings.session_cookie_secure,
     )
+    application.add_exception_handler(LoginRequiredError, redirect_to_login)
+    application.add_exception_handler(StarletteHTTPException, render_http_error)
     application.include_router(auth_router)
     application.include_router(pages_router)
+    application.include_router(claims_api_router)
+    application.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")
 
     @application.get("/health", tags=["operations"])
     def health() -> dict[str, str]:
